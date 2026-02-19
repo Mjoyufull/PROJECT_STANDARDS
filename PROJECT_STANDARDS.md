@@ -2,8 +2,8 @@
 
 > A Manual for Maintaining Sensible Git Discipline Without Sacrificing Productive Chaos
 
-**Document Version:** 1.2.0  
-**Last Updated:** 2025-10-27  
+**Document Version:** 1.3.0  
+**Last Updated:** 2026-02-18  
 **Audience:** Future me, contributors, and anyone brave enough to work on these projects
 
 ---
@@ -139,7 +139,7 @@ git push origin dev
 ```
 main (production releases only)
   |
-  └── merge from release/v2.x.x (at release time) ← tag applied here
+  └── merge from release/v2.x.x (at release time) ← then tag (e.g. 2.5.0) and create GitHub release with body
        |
        release/v2.x.x (release preparation branch)
          |
@@ -349,7 +349,7 @@ They're conversations between equals, not bureaucratic rituals.
 4. **Discussion:** Feedback is addressed; code may be amended and re-pushed.
 5. **Approval:** One approval from a maintainer or designated collaborator required.
 6. **Merge:** Use *Squash and Merge* unless multiple commits are meaningful.
-7. **Tag Release (when merging to main):** Only maintainers tag versions.
+7. **Tag and release (when merging to main):** Only maintainers create the version tag (version number only) and the GitHub release (title [version-codename], body from template).
 
 ### Review Timeline
 
@@ -419,6 +419,8 @@ A maintainer creates a release branch when:
 
 **Important:** Release branches freeze a specific point in dev, allowing ongoing PRs to continue merging into dev without affecting the release preparation.
 
+**Tags are created during the release stage:** When you are ready to release, you create the release branch, do version bumps and final testing, then merge the release branch to main. Only after that merge do you create the tag and publish the release. The release (GitHub release / changelog) is the canonical record of what shipped; the tag is a simple version-number pointer to that commit.
+
 ### Preparation
 
 1. Ensure all feature PRs for the release are merged into dev.
@@ -439,7 +441,7 @@ A maintainer creates a release branch when:
    ```bash
    git commit -am "chore: bump version to 3.0.0-kiwicrab"
    ```
-6. Prepare release notes following [Keep a Changelog](https://keepachangelog.com/) format.
+6. Prepare release notes using the [Release body template](#release-body-template) below.
 7. Verify [Semantic Versioning 2.0.0](https://semver.org/) compliance.
 8. Run final tests on the release branch:
    ```bash
@@ -455,8 +457,8 @@ git checkout main
 git pull origin main
 git merge release/v3.0.0-kiwicrab
 
-# 2. Tag the release
-git tag -a v3.0.0-kiwicrab -m "v3.0.0-kiwicrab: release notes here"
+# 2. Tag the release (tag = version number only, no codename)
+git tag -a 3.0.0 -m "3.0.0"
 git push origin main --tags
 
 # 3. Merge release branch back to dev (so dev has the version bump)
@@ -478,35 +480,82 @@ git push origin --delete release/v3.0.0-kiwicrab
 
 ### GitHub Release
 
-Create a release using [Keep a Changelog](https://keepachangelog.com/) format.
+**Release title:** Use exactly `[version-codename]` in brackets, e.g. `[3.0.0-kiwicrab]`. No date or extra text in the title.
 
-**Release Notes Structure:**
-- Use Keep a Changelog categories: Added, Changed, Deprecated, Removed, Fixed, Security
-- Include technical details for developers
-- Include compatibility notes
-- Include installation instructions
-- Reference [Semantic Versioning](https://semver.org/) compliance
+**Git tag:** Use the version number only (no codename), e.g. `3.0.0`, `2.5.0`, `2.4.0`. Create the tag on main after the release branch is merged; then create the GitHub release from that tag and paste the release body (changelog) below.
 
-Example:
+### Release body template
+
+The release body is the changelog. Use this structure (omit sections that don’t apply). Prefer bullets under each heading; use sub-bullets for detail. Optionally cite PRs (e.g. “from pr #23”).
 
 ```markdown
-## [3.0.0-kiwicrab] - 2026-02-02
+[3.0.0-kiwicrab] Latest
 
-### Added
-- Tag color name display feature (--cclip-show-tag-color-names)
-- Tag management CLI flags (--tag clear, --tag list)
+Breaking changes
 
-### Changed
-- Major codebase refactor into modular structure
-- Improved Sixel image clearing logic
+- Database and cache format
+  - Serialization changed from X to Y. Existing data is not migrated. On first run after upgrading, do Z.
 
-### Fixed
-- Tag color names now display correctly in UI
-- Sixel clearing no longer wipes text
+Added
 
-### Notes
-MINOR version bump per Semantic Versioning 2.0.0 - backward compatible.
+- Feature name
+  - Bullet points describing what was added; optional "from pr #N".
+- Another feature
+  - Details.
+
+Changed
+
+- Area or component
+  - What changed and why it matters.
+- Dependencies / build
+  - List dependency or tooling changes.
+
+Fixed
+
+- Brief description of fix: what was wrong and what users get now.
+- Another fix.
+
+Technical details
+
+- Implementation notes for developers (optional): key algorithms, storage format, config keys, etc.
+
+Documentation
+
+- README: what was updated.
+- Man page / USAGE / CONTRIBUTING: what was updated.
+
+Notes
+
+- SemVer: this is a MAJOR/MINOR/PATCH release because …
+- Rationale: why this release matters in one or two sentences.
+
+Contributors
+
+- @handle1
+- @handle2
+- Co-authored-by: @bot (if applicable)
+
+Compatibility
+
+- Language/runtime: e.g. Rust 1.89+ (unchanged).
+- Platforms: e.g. GNU/Linux and *BSD (unchanged).
+- Config / database: compatible or breaking summary.
+- Breaking: if applicable, what users must do (back up, re-pin, etc.).
+
+Contributors
+
+- @handle1
+- @handle2
 ```
+
+**Section rules:**
+- **Breaking changes** — If present, call out at top and again in Notes/Compatibility. Be explicit about migration or “no migration.”
+- **Added / Changed / Fixed** — Use for user-visible and dependency/build changes. Link to PRs when helpful.
+- **Technical details** — Optional; use for implementation notes that help contributors or integrators.
+- **Documentation** — What doc files were updated and for what (version refs, new options, examples).
+- **Notes** — SemVer rationale and short rationale for the release.
+- **Contributors** — List everyone who contributed (and co-authors if you credit them).
+- **Compatibility** — Runtime, platforms, config/DB, and any breaking migration steps.
 
 ---
 
@@ -514,17 +563,11 @@ MINOR version bump per Semantic Versioning 2.0.0 - backward compatible.
 
 Semantic Versioning 2.0.0 + optional codename.
 
-Format:
+**Display version (codename):** `major.minor.patch-codename`, e.g. `3.0.0-kiwicrab`.
 
-```
-major.minor.patch-codename
-```
+**Git tag:** Version number only — `3.0.0`, `2.5.0`, `2.2.3`. No codename and no `v` prefix unless the project convention is to use `v` (e.g. `v3.0.0`).
 
-Example:
-
-```
-v3.0.0-kiwicrab
-```
+**Release title (GitHub / changelog):** `[version-codename]` in brackets, e.g. `[3.0.0-kiwicrab]`.
 
 ### Semantic Versioning Rules
 
@@ -633,12 +676,13 @@ git commit -am "chore: bump version to 3.0.0-kiwicrab"
 cargo build --release
 cargo test
 
-# 4. Merge to main and tag
+# 4. Merge to main, tag (version number only), then create GitHub release
 git checkout main
 git pull origin main
 git merge release/v3.0.0-kiwicrab
-git tag -a v3.0.0-kiwicrab -m "v3.0.0-kiwicrab: major release"
+git tag -a 3.0.0 -m "3.0.0"
 git push origin main --tags
+# Create GitHub release: tag 3.0.0, title [3.0.0-kiwicrab], body = release notes from template
 
 # 5. Merge back to dev
 git checkout dev
@@ -660,8 +704,9 @@ git checkout -b hotfix/cache
 git commit -am "fix: prevent cache corruption"
 git push origin hotfix/cache
 # PR to main, approve, merge
-git tag -a v3.0.1-kiwicrab -m "v3.0.1-kiwicrab: hotfix"
+git tag -a 3.0.1 -m "3.0.1"
 git push origin main --tags
+# Create GitHub release: title [3.0.1-kiwicrab], body = release notes
 git checkout dev
 git merge main
 git push origin dev
