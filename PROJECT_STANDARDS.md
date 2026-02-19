@@ -33,11 +33,12 @@
 
 1. **main is sacred.** Never push directly. It contains only tagged, production-ready releases.
 2. **dev is the integration branch.** All feature branches merge here first.
-3. **All code changes go through pull requests.** No exceptions. Even for solo work.
-4. **Releases are the changelog.** GitHub releases serve as the historical record. No separate CHANGELOG.md file is maintained.
-5. **Commit messages matter at release time.** During development, commit as suits your workflow. Before merging, clean them up.
-6. **Flow over formality.** Discipline exists to enable productivity, not strangle it.
-7. **Reviews are conversations, not commands.** The goal is to improve, not to dictate.
+3. **main and dev never merge directly.** Code reaches main only via release branches (or hotfix branches). Main is merged into dev only after a hotfix (to sync the fix) or after a docs-only change to main (to sync the docs).
+4. **All code changes go through pull requests.** No exceptions. Even for solo work.
+5. **Releases are the changelog.** GitHub releases serve as the historical record. No separate CHANGELOG.md file is maintained.
+6. **Commit messages matter at release time.** During development, commit as suits your workflow. Before merging, clean them up.
+7. **Flow over formality.** Discipline exists to enable productivity, not strangle it.
+8. **Reviews are conversations, not commands.** The goal is to improve, not to dictate.
 
 ### Design Intent
 
@@ -66,8 +67,8 @@ This document defines the technical Git workflow. See also:
 
 | Branch | Purpose | Push Policy |
 |--------|----------|-------------|
-| main | Stable, production-ready code. Every commit is a tagged release. | Never push directly. Merge only from release branches after testing and tagging. |
-| dev | Integration branch. All features merge here before release branches. | Never push directly. Only receives merges from feature branches via pull requests. |
+| main | Stable, production-ready code. Every commit is a tagged release. | Never push directly. Receives merges **only from release branches or hotfix branches** — never from dev. |
+| dev | Integration branch. All features merge here; release branches are created from dev. | Never push directly. Receives merges **from feature branches** (via PRs) and **from main only after a hotfix or after a docs-only change to main** (to sync back). Never from main otherwise. |
 
 ### Feature Branches
 
@@ -91,7 +92,7 @@ Release branches are created from dev when a maintainer decides to release. They
 - Freeze a stable point in dev for release preparation
 - Update version numbers in all relevant files
 - Perform final testing before release
-- Merge to main (which gets tagged) and then back to dev
+- Merge to main (which gets tagged); then merge the release branch back to dev (so dev has the version bump). main and dev do not merge into each other — the release branch is the path to main.
 
 **When to create a release branch:**
 - A maintainer decides it's time for a release
@@ -104,7 +105,7 @@ Release branches are created from dev when a maintainer decides to release. They
 |------|---------|----------|
 | Hotfix | hotfix/version | Emergency patches for production issues |
 
-Hotfix branches are created from main, merged back into main after patching, then merged into dev.
+Hotfix branches are created from main, merged back into main after patching, then **main is merged into dev** so the fix is present in development. This is one of the two cases where main is merged into dev (the other is after a docs-only change to main).
 
 ### Documentation-Only Changes
 
@@ -124,7 +125,7 @@ git pull origin main
 # Make documentation changes
 git commit -m "docs: fix typo in README"
 git push origin main
-# Sync to dev
+# Sync to dev (exception: docs-only is one of the two cases where main is merged into dev; the other is after a hotfix)
 git checkout dev
 git merge main
 git push origin dev
@@ -135,6 +136,8 @@ git push origin dev
 ---
 
 ## Workflow Overview
+
+**Rule: main and dev never touch each other directly.** Code reaches main only via release branches (or hotfix branches). Main is merged into dev only after a hotfix (to sync the fix) or after a docs-only change to main (to sync the docs).
 
 ```
 main (production releases only)
@@ -472,11 +475,12 @@ git push origin --delete release/v3.0.0-kiwicrab
 ```
 
 **Why this workflow:**
+- main and dev stay independent; only release branches (and hotfixes) connect them
 - dev continues accepting PRs during release preparation
 - Release work is isolated on the release branch
 - No conflicts from ongoing development
 - Clear freeze point for the release
-- dev stays in sync with version numbers
+- dev gets version bumps by merging the release branch back, not by merging main
 
 ### GitHub Release
 
@@ -542,10 +546,6 @@ Compatibility
 - Config / database: compatible or breaking summary.
 - Breaking: if applicable, what users must do (back up, re-pin, etc.).
 
-Contributors
-
-- @handle1
-- @handle2
 ```
 
 **Section rules:**
@@ -666,7 +666,7 @@ git push origin feat/detach-mode
 # 1. Create release branch from dev
 git checkout dev
 git pull origin dev
-git checkout -b release/v3.0.0-kiwicrab
+git checkout -b release/3.0.0-kiwicrab
 
 # 2. Update version numbers in Cargo.toml, flake.nix, etc.
 # ... edit files ...
@@ -679,19 +679,19 @@ cargo test
 # 4. Merge to main, tag (version number only), then create GitHub release
 git checkout main
 git pull origin main
-git merge release/v3.0.0-kiwicrab
+git merge release/3.0.0-kiwicrab
 git tag -a 3.0.0 -m "3.0.0"
 git push origin main --tags
 # Create GitHub release: tag 3.0.0, title [3.0.0-kiwicrab], body = release notes from template
 
 # 5. Merge back to dev
 git checkout dev
-git merge release/v3.0.0-kiwicrab
+git merge release/3.0.0-kiwicrab
 git push origin dev
 
 # 6. Clean up
-git branch -d release/v3.0.0-kiwicrab
-git push origin --delete release/v3.0.0-kiwicrab
+git branch -d release/3.0.0-kiwicrab
+git push origin --delete release/3.0.0-kiwicrab
 ```
 
 ### Hotfix

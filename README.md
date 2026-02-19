@@ -1,2 +1,10 @@
 # PROJECT_STANDARDS
-project standards covering different programing Langs with best practices and workflow standards
+
+Project standards, workflows, and best practices. Base for other projects (any language).
+
+**Standards by language**
+
+| Language | Doc |
+|----------|-----|
+| General (base/rust) | [PROJECT_STANDARDS.md](./PROJECT_STANDARDS.md) |
+
