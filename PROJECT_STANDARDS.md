@@ -86,13 +86,15 @@ All work occurs in feature branches created from dev.
 
 | Type | Naming | Purpose |
 |------|---------|---------|
-| Release | release/version | Prepare releases with version bumps and final testing |
+| Release | release/version | Prepare releases with version bumps, docs updates, and final testing |
 
 Release branches are created from dev when a maintainer decides to release. They are used to:
 - Freeze a stable point in dev for release preparation
-- Update version numbers in all relevant files
+- Update version numbers and release-related docs (README, man pages, etc.) — **no source/code changes**
 - Perform final testing before release
 - Merge to main (which gets tagged); then merge the release branch back to dev (so dev has the version bump). main and dev do not merge into each other — the release branch is the path to main.
+
+**Release branches are not for code changes.** Only version bumps and docs changes belong on the release branch. If you find a bug during release prep: fix it in dev, then either (a) wait for dev to be up to date and merge dev into the release branch to bring in that fix, or (b) ship the release without the fix (the bug stays in that release). Do not make code changes on the release branch.
 
 **When to create a release branch:**
 - A maintainer decides it's time for a release
@@ -103,9 +105,15 @@ Release branches are created from dev when a maintainer decides to release. They
 
 | Type | Naming | Purpose |
 |------|---------|----------|
-| Hotfix | hotfix/version | Emergency patches for production issues |
+| Hotfix | hotfix/version | Emergency patches for production issues only |
 
-Hotfix branches are created from main, merged back into main after patching, then **main is merged into dev** so the fix is present in development. This is one of the two cases where main is merged into dev (the other is after a docs-only change to main).
+Hotfix branches are created from main, go through a PR to main, and are **exceptions, not the rule** — hotfixes are never meant to happen. Do not confuse hotfixes with normal bug fixes; normal fixes go through dev → release branch → main.
+
+**Process:** The contributor opens a hotfix PR with the code fix only. The **maintainer** adds a commit on the hotfix branch (or before merge) to bump the version in Cargo.toml, README, and other refs, then merges the PR to main. There is no release branch: the maintainer creates the tag and GitHub release for that hotfix. Then **main is merged into dev** so the fix (and version bump) is present in development. This is one of the two cases where main is merged into dev (the other is after a docs-only change to main).
+
+**Reverts** of a bad release are treated like hotfixes (branch from main, revert, version bump by maintainer, merge to main, tag and release, then merge main into dev).
+
+**When merging main into dev (after a hotfix or docs-only change):** If there are conflicts, prioritize the hotfix side for code (the hotfix knows what was changed). Docs conflicts matter less since release branches will result in doc review anyway. For code conflicts, the person merging main into dev resolves them; context-dependent.
 
 ### Documentation-Only Changes
 
@@ -420,7 +428,7 @@ A maintainer creates a release branch when:
 - dev is in a stable state (no critical bugs, features are complete)
 - All planned features for the release are merged into dev
 
-**Important:** Release branches freeze a specific point in dev, allowing ongoing PRs to continue merging into dev without affecting the release preparation.
+**Important:** Release branches freeze a specific point in dev, allowing ongoing PRs to continue merging into dev without affecting the release preparation. Release branches are for version bumps and docs only — no code changes (see [Release Branches](#release-branches): if you find a bug, fix in dev and either merge dev into the release branch or ship without the fix).
 
 **Tags are created during the release stage:** When you are ready to release, you create the release branch, do version bumps and final testing, then merge the release branch to main. Only after that merge do you create the tag and publish the release. The release (GitHub release / changelog) is the canonical record of what shipped; the tag is a simple version-number pointer to that commit.
 
@@ -469,10 +477,12 @@ git checkout dev
 git merge release/v3.0.0-kiwicrab
 git push origin dev
 
-# 4. Delete the release branch
+# 4. Delete the release branch only after it is merged to both main and dev
 git branch -d release/v3.0.0-kiwicrab
 git push origin --delete release/v3.0.0-kiwicrab
 ```
+
+**Always merge the release branch to both main and dev before deleting it.** If you already deleted the release branch, merge main into dev once as a one-off recovery.
 
 **Why this workflow:**
 - main and dev stay independent; only release branches (and hotfixes) connect them
@@ -601,6 +611,10 @@ For unstable or beta releases:
 These can be combined with codenames:
 - `v3.0.0-alpha-kiwicrab`
 
+### LTS and next / parallel release lines
+
+If you maintain permanent branches for LTS and "next" (or similar) cycles, treat them like separate mains: each has its own release flow, tags, and versioning. Mark everything relating to them with `lts`, `next`, or alike — branch names, versioning (e.g. 2.x LTS vs 3.x next), and docs. Same rules apply per line; they do not merge into each other except by explicit policy (e.g. cherry-picks, or not at all).
+
 ---
 
 ## Documentation Standards
@@ -696,17 +710,28 @@ git push origin --delete release/3.0.0-kiwicrab
 
 ### Hotfix
 
+Hotfixes are exceptions: no release branch. Maintainer bumps version before merging.
+
 ```bash
+# Contributor: branch from main, fix only
 git checkout main
 git pull origin main
 git checkout -b hotfix/cache
-# fix issue
+# fix issue (no version bump in this commit)
 git commit -am "fix: prevent cache corruption"
 git push origin hotfix/cache
-# PR to main, approve, merge
+# Open PR to main
+
+# Maintainer: add version bump (Cargo.toml, README, etc.) on hotfix branch, then merge PR
+# ... bump to 3.0.1, commit, push ...
+# Merge PR to main
+
+# Maintainer: tag and release (no release branch)
 git tag -a 3.0.1 -m "3.0.1"
 git push origin main --tags
 # Create GitHub release: title [3.0.1-kiwicrab], body = release notes
+
+# Merge main into dev
 git checkout dev
 git merge main
 git push origin dev
