@@ -196,6 +196,8 @@ git checkout -b feat/detach-mode
 - "wip" and "temp fix" are valid local commits.
 - Code explains *what*, commits should explain *why*.
 - Work offline freely — rebase and clean up later.
+- **When you're online and actively coding, open a draft PR early** and push commits to it instead of working in silence. That gives the team visibility into what you're tackling so nobody duplicates effort on the same area.
+- **When you are online and actively coding**, open a **draft PR** early and push commits to it. That gives the team visibility so nobody else starts the same work in parallel. Silence on a branch is how duplicate effort happens.
 
 Example:
 
@@ -338,10 +340,12 @@ Closes #42
 
 ### Draft Pull Requests
 
-Use draft PRs for early feedback:
-- Open as draft when code is incomplete but you want early review
+Use draft PRs for early feedback and visibility:
+- **Default when online:** open a draft PR as soon as you start meaningful work on a branch, then keep pushing commits. Others can see you're on it before they pick up overlapping tasks.
+- Open as draft when code is incomplete but you want early review or coordination
 - Mark ready for review when complete
 - Useful for architectural discussions before full implementation
+- Working only on a local branch with no PR is fine for short offline bursts; for sustained online work, prefer a draft PR so the repo doesn't look idle while two people unknowingly build the same thing
 
 ### Work-in-Progress PRs
 

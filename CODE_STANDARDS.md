@@ -115,6 +115,7 @@ In repos that use the `main` / `dev` / release-branch model:
 - documentation-only changes follow the docs flow into `main`
 - release branches are for version bumps, release docs, and final verification, not surprise refactors
 - hotfixes are minimal emergency exceptions, not a shortcut around normal review discipline
+- when you're online and coding on a feature/fix branch, open a **draft PR early** and commit to it so others have visibility; don't work in silence on shared repos if it might overlap someone else's task
 
 If you are the primary maintainer, these standards still apply.
 Solo maintenance is not a reason to skip review thinking, testing, rollback planning, or release hygiene.
@@ -1774,6 +1775,8 @@ RUSTDOCFLAGS="-D warnings" cargo doc --locked --no-deps
 ```
 
 ### Before Opening a PR
+
+If you're actively developing while online, you should usually already have a **draft PR** open on your branch (see `PROJECT_STANDARDS.md`). Use the checks below before marking it ready for review; if you skipped the draft step, run them before your first PR push.
 
 ```bash
 cargo fmt --all
