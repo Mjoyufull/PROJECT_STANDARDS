@@ -8,3 +8,5 @@ Project standards, workflows, and best practices. Base for other projects (any l
 |-------|-----|
 | Repo workflow, branching, releases, and contribution flow | [PROJECT_STANDARDS.md](./PROJECT_STANDARDS.md) |
 | Code structure, quality, testing, and Rust-first implementation style | [CODE_STANDARDS.md](./CODE_STANDARDS.md) |
+| AI agents: planning docs, session contracts, git delegation, public boundaries | [AI_STANDARDS.md](./AI_STANDARDS.md) |
+| Example `codingprocess.md`, `idk.md`, direction, deviation, `.public.txt` | [ref/](./ref/) |
