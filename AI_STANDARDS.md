@@ -2,7 +2,7 @@
 
 > A Manual for Using LLM Agents on Real Projects Without Turning Git History Into a Diary of Model Hallucinations
 
-**Document Version:** 1.5.0  
+**Document Version:** 1.7.0  
 **Last Updated:** 2026-06-04  
 **Audience:** Future me and anyone using AI on real repos(larpers) — this is a **human** playbook, not a system prompt.  
 **Scope:** Cross-project standards for AI-assisted planning, implementation, documentation, and (rarely) git operations  
@@ -27,14 +27,16 @@
 10. [Public Documentation Voice](#public-documentation-voice)
 11. [Prompt & Task Shape](#prompt--task-shape)
 12. [Session Lifecycle](#session-lifecycle)
-13. [Verification & Evidence](#verification--evidence)
-14. [Git, Branches, and Commits](#git-branches-and-commits)
-15. [Where AI Excels](#where-ai-excels)
-16. [Security & Trust](#security--trust)
-17. [External Benchmarks](#external-benchmarks)
-18. [What Not To Do](#what-not-to-do)
-19. [Session Checklist](#session-checklist)
-20. [Summary](#summary)
+13. [Minimizing Code Churn](#minimizing-code-churn)
+14. [Engineering Rigor & Virtuous Laziness](#engineering-rigor--virtuous-laziness)
+15. [Verification & Evidence](#verification--evidence)
+16. [Git, Branches, and Commits](#git-branches-and-commits)
+17. [Where AI Excels](#where-ai-excels)
+18. [Security & Trust](#security--trust)
+19. [External Benchmarks](#external-benchmarks)
+20. [What Not To Do](#what-not-to-do)
+21. [Session Checklist](#session-checklist)
+22. [Summary](#summary)
 
 ---
 
@@ -45,7 +47,7 @@
 1. **Contracts beat "vibes".** Behavior comes from specs and standards, not from chat memory or `phase.md`.
 2. **Plan before you patch.** Hard work gets roadmaps, direction docs, and status ledgers before large code dumps — then **interplay** in small slices once you know what you are attacking.
 3. **Evidence before "done."** If tests did not run, say so. If behavior is unknown, record it in `idk.md`.
-4. **Small, honest slices.** One real improvement beats ten inflated status updates.
+4. **Small, honest slices.** One real improvement beats ten inflated status updates — and beats the rework churn that shows up when AI touches too much at once (see [Minimizing Code Churn](#minimizing-code-churn)).
 5. **Internal docs are internal.** Planning, study notes, and `ref/` material are not public-facing project docs, gang some of yall turn your repos into markdown soup and feed us AI text as if we gone read all dat.
 6. **Short prompts, real verification.** Task text should read like a developer message, not a scraped GitHub issue novel.
 7. **You own git by default.** You and the model edit files; **you** commit unless you explicitly told it it may commit this session.
@@ -54,6 +56,21 @@
 10. **Public copy describes what ships.** No "we will eventually" in README, LICENSE, or operator docs unless status is the point.
 11. **Status docs move with the work.** List living ledgers in **`.status.txt`** and update them when your triggers fire — stale `phase.md` after a green test run is a failed handoff.
 12. **Right mode for the moment.** **Sit-and-plan** when the attack surface is unclear; **interplay** when a direction doc already shows the tree — side panel, skinny prompts, short replies, you stay in the driver's seat.
+13. **Virtuous laziness, not vanity output.** Models don't feel time pressure — you do. Use AI to make the system **simpler and easier to maintain**, not to win lines-of-code scoreboards (see [Engineering Rigor & Virtuous Laziness](#engineering-rigor--virtuous-laziness)).
+
+### Virtuous laziness (why small slices are moral, not timid)
+
+Larry Wall's programmer virtue **laziness** is ironic: real laziness is hard work up front — abstractions, simplicity, hammock-driven thinking — so future you (and everyone else) spends less time fighting the system. Your finite time is a **feature**: it forces cognitive load limits and pushes you toward crisp design.
+
+LLMs don't share that constraint. Work costs them nothing; left unchecked they **grow systems** — duplicate paste, stowaway files, whole subsystems you didn't ask for — because vanity metrics (lines per day, “still speeding up”) reward bulk, not maintainability. Bryan Cantrill's [*The peril of laziness lost*](https://bcantrill.dtrace.org/2026/04/12/the-peril-of-laziness-lost/) is the clearest statement of the failure mode: **layercake garbage** from false industriousness.
+
+Your job is to supply the laziness the model lacks:
+
+- **Constraints** — spec, slice boundaries, out-of-scope, churn limits in `codingprocess.md`
+- **Curiosity** — read the diff; don't “vibe” until green (see [Engineering Rigor](#engineering-rigor-vs-vibe-coding))
+- **Simplicity as success** — fewer moving parts beats a bigger PR; reject “helpful” extras
+
+Use AI for the **non-virtuous** grunt (doc tests, pattern replication, tedium) in service of **virtuous** outcomes: simpler surfaces, stronger tests, work you would otherwise never get to — the middle path Oxide folks describe in [Engineering Rigor in the LLM Age](https://oxide-and-friends.transistor.fm/episodes/engineering-rigor-in-the-llm-age/transcript).
 
 ### Design Intent
 
@@ -66,11 +83,12 @@ These standards exist so AI-assisted work stays:
 - separated from public-facing prose and licensing
 - free of commit spam, co-author theater, and leaderboard optimization
 - usable both for long unattended passes **and** for in-editor interplay without the session turning into autopilot
+- resistant to **code churn** — short-lived rework, drive-by edits, and oversized diffs that are hard to review and merge
 
 This is a standards document, not a prompt cookbook.
 If a rule needs to be broken, break it deliberately and document why.
 
-Several rules below are shaped by published work on prompting, long-context use, code-generation security, and agent benchmarks. Primary sources are listed under [Standards Basis](#standards-basis) in the Summary — same pattern as `CODE_STANDARDS.md`.
+Several rules below are shaped by published work on prompting, long-context use, code-generation security, agent benchmarks, **code churn**, and practitioner essays on rigor (Cantrill, Oxide [RFD 576](https://rfd.shared.oxide.computer/rfd/0576)). Primary sources are listed under [Standards Basis](#standards-basis) in the Summary — same pattern as `CODE_STANDARDS.md`.
 
 ---
 
@@ -754,7 +772,7 @@ Role-play can help on some reasoning benchmarks (Xu et al., NAACL 2024), but sys
 
 ## Session Lifecycle
 
-Pick a mode first: [sit-and-plan](#planning-pass-lifecycle) or [interplay](#interplay-lifecycle). Planning pass is the default for big or fuzzy work. Interplay relaxes how much you load up front and how long replies can be — **not** spec authority and not guessing behavior.
+Pick a mode first: [sit-and-plan](#planning-pass-lifecycle) or [interplay](#interplay-lifecycle). Planning pass is the default for big or fuzzy work. Interplay relaxes how much you load up front and how long replies can be — **not** spec authority and not guessing behavior. Both modes assume **you** supply the virtuous laziness models lack ([Engineering Rigor & Virtuous Laziness](#engineering-rigor--virtuous-laziness)).
 
 ### Planning pass lifecycle
 
@@ -772,7 +790,7 @@ Read → implementation-plan (slice) → edit → run tests/commands → update 
 ```
 
 - Have it **run tools** (read file, test, patch) — don't accept "done" without output. Yao et al. (*ReAct*, ICLR 2023) is the research backing for interleaving reasoning and commands.
-- Keep slices small; push back on drive-by refactors.
+- Keep slices small; push back on drive-by refactors ([Minimizing Code Churn](#minimizing-code-churn)).
 - Put unknowns in `idk.md`; put plan drift in the deviation doc when spec still holds.
 - When **`.status.txt`** triggers fire, update listed status files before you call the slice done.
 
@@ -798,7 +816,7 @@ When you tell it to continue until blocked:
 
 ### Interplay lifecycle
 
-Interplay is when you are **already implementing**, a direction doc (or study) answers "where in the tree," and you only need execution help. Typical setup: editor keybinding → small AI panel (e.g. leader+g in Neovim); Cursor side chat; another terminal tab — tool doesn't matter, **habit** does.
+Interplay is when you are **already implementing**, a direction doc (or study) answers "where in the tree," and you only need execution help. Typical setup: editor keybinding → small AI panel (e.g. leader+g in Neovim); Cursor side chat; another terminal tab — tool doesn't matter, **habit** does. **Not** vibe coding: read the diff, self-review before you ask anyone else to, and don't wholesale re-generate when review comments arrive.
 
 #### 1. Before a quick ask
 
@@ -856,6 +874,172 @@ You said "keep going until blocked"? → planning pass only
 Side panel / "just wire this"?      → interplay
 You + model paired on one feature?  → dual work: short chunks; full handoff when slice closes
 ```
+
+---
+
+## Minimizing Code Churn
+
+**Code churn** here means lines or files that get **re-touched soon after landing** — reverts, drive-by fixes, duplicate paste, or “while I'm here” refactors. With AI in the loop, generation is cheap; **rework and review** are not. The goal is not zero churn — it is **small, reviewable slices** that survive contact with tests and the next session.
+
+This section is why tenet 4 (“small, honest slices”), interplay limits (~3 files / ~80 lines), skinny prompts, and batched commits exist.
+
+### What the evidence says
+
+Churn is **not** a single headline number — studies disagree on direction but agree on **risk patterns** you can design against.
+
+| Finding | Source | What it means for you |
+|---------|--------|------------------------|
+| AI-associated commits are **smaller per commit** (fewer files, lower line churn at landing) but see **more follow-up edits** at 30–90 days — higher touch frequency and accumulated churn over time | Mao et al., large-scale repo study (2026) | Landing a small diff is not the end; **review and test soon** after AI touches code, or you pay later in rework |
+| Self-admitted GenAI adoption in 151 OSS repos: **no general churn explosion** after adoption (RDD); effects vary by repo; **generation tasks** correlate more with rework than maintenance-style tasks | Xiao et al., *Self-Admitted GenAI Usage in OSS* (2025) | Don't panic from industry dashboards alone — **monitor your repo**; treat generated code as provisional |
+| Industry analysis of ~153M changed lines: rising share of lines **reverted or updated within ~2 weeks**; more add/paste vs refactor/move (vendor report, not peer-reviewed) | GitClear, *Coding on Copilot* (2024) | Short-window rework is a real failure mode; **slice size and review discipline** matter even if your project isn't in their sample |
+| Merged **agentic PRs** differ structurally from human PRs — notably **commit count** (large effect) and **files touched / deletions** (medium effects) | Ogenrwot & Businge, MSR '26 | Agents can **sprawl across commits** inside one PR; you may want one logical commit per slice when you squash |
+| **Merge conflict rate** rises sharply with PR size (churn = adds + deletes): ~10% for tiny PRs vs ~30%+ as median churn grows | Ogenrwot & Businge, *AgenticFlict* (AIware '26) | Big AI dumps are integration tax — keep PRs small per `PROJECT_STANDARDS.md` |
+| AI assistance did not reliably shorten tasks; friction is **understanding, editing, debugging** generated code | Vaithilingam et al., CHI 2022 | A 400-line “helpful” diff can cost more than writing 40 lines yourself — **read the diff** |
+| GenAI output is often **provisional** — follow-up fixes, reversions, deletions after generation appear in self-admitted usage | Xiao et al. (2025), qualitative coding | Plan an explicit **validate → revise** step after generation, not “ship and forget” |
+
+**Takeaway:** AI can make **first landing** look tidy while **later churn** and **integration pain** still rise if you let scope creep. Process beats hope. Cantrill's framing: models optimize for **volume** when you optimize for **simplicity** — your review gate is where virtuous laziness lives.
+
+### Practices that actually cut churn
+
+These map to sections already in this doc — churn control is not a separate religion.
+
+**Scope and prompts**
+
+- **Name the slice** in every prompt — files, behavior, **out of scope** (contractor and [interplay](#interplay-prompt-skinny) shapes).
+- Get a short **implementation-plan** before multi-file work so the model doesn't “discover” extra files mid-run.
+- Say **no drive-by refactors** in `codingprocess.md`; reject diffs that touch unrelated modules.
+- Prefer **edit-in-place** (“fix this function”, “wire this module”) over “rewrite the crate” unless you meant a refactor slice.
+
+**Size and review**
+
+- Interplay guardrails: **~3 files / ~80 lines** then stop — widen scope deliberately or switch to planning pass.
+- One **logical slice per PR** (or one squash-ready commit batch); don't mix unrelated fixes because the model offered them.
+- **Review the diff while context is fresh** — same session or next day — to catch the 30-day rework pattern Mao et al. report.
+- Run **project tests before** you call a slice done; churn often tracks “looked fine” landings that tests would have caught.
+
+**Git and integration**
+
+- **Batch commits** — not every model save (`PROJECT_STANDARDS.md` + [Git](#git-branches-and-commits)).
+- Keep PRs **small enough to review** — conflict rate climbs with churn (AgenticFlict).
+- When delegating commits, require a handoff that lists **every path touched** so you can spot scope creep before push.
+
+**Optional `codingprocess.md` limits** (paste into the model-facing contract)
+
+```markdown
+## Churn limits
+- Max ~3 files or ~80 lines per interplay invocation unless the prompt widens scope.
+- No whole-file rewrites when a localized edit satisfies the slice.
+- No formatting-only or rename sweeps unless the slice is explicitly "format/rename".
+- If tests fail, stop after one focused fix attempt — do not "fix forward" across the tree.
+```
+
+**When churn is acceptable**
+
+- Exploratory spikes you **throw away** before merge.
+- Mechanical regenerations with **golden tests** you intentionally update (snapshot/help text) — still one slice, one review.
+- Large refactors **named as such** in `plan.md` with their own gate — not smuggled in as a bugfix.
+
+### Churn smells (check the diff)
+
+| Smell | Likely cause | Response |
+|-------|--------------|----------|
+| Same file edited again next session for the same feature | Slice too big or spec unclear | Shrink scope; `idk.md` or spec fix |
+| Lots of new helpers for a one-line behavior fix | Model over-engineered | Revert extras; restate minimal done-when |
+| Copy-pasted parallel blocks | DRY collapse | Refactor slice or hand-fix |
+| Formatting + logic + rename in one diff | Unbounded “cleanup” | Split; interplay rule: no drive-by |
+| PR touches half the tree | Missing out-of-scope | Close; replan with implementation-plan |
+| Duplicate test harnesses, hello-world apps, empty files in one “feature” | Model false industriousness | Reject; restate slice; see [virtuous laziness](#virtuous-laziness-why-small-slices-are-moral-not-timid) |
+
+---
+
+## Engineering Rigor & Virtuous Laziness
+
+Empirical papers tell you churn and security risks exist. Bryan Cantrill and the Oxide team's public writing ([blog](https://bcantrill.dtrace.org/), [RFD 576 — Using LLMs at Oxide](https://rfd.shared.oxide.computer/rfd/0576), [Oxide and Friends on rigor in the LLM age](https://oxide-and-friends.transistor.fm/episodes/engineering-rigor-in-the-llm-age/transcript)) describe **how to work** when you care about systems that last. This section steals the useful bits — not Oxide's HR policy, the engineering habits.
+
+### The false dichotomy
+
+Two bad poles:
+
+| Pole | Posture | Why it fails |
+|------|---------|--------------|
+| **Vibe coding** | Closed loop; regenerate until lucky; no curiosity about the gooey middle | You can't maintain or defend what you didn't understand |
+| **LLM abstinence** | Never use them; moral purity | You leave rigor on the table — doc tests, migrations, pattern replication you'd skip |
+
+The productive path is a **large middle**: AI as tool under **your** responsibility, often increasing rigor rather than velocity. Cantrill's kernel experiment on the podcast is the shape: known design, no closed loop, read block comments, fix subtle issues — **pairing**, not autopilot.
+
+### Engineering rigor vs vibe coding
+
+**Vibe coding** (Adam Leventhal's shibboleth on the podcast): tautological lack of curiosity — if you don't like the output, run again without opening the diff. Fine for throwaway static-site JS; poison for anything you will live with.
+
+**Rigor path:**
+
+- You know **what good looks like** before the model runs (spec, direction doc, implementation-plan).
+- You **don't close the loop** on unreviewed output for shipping code — tests and your eyes are the gate.
+- You treat model output as **provisional** until verified (Xiao et al. generation-task rework; RFD 576 responsibility).
+- You **slow down for quality** when the artifact matters — use saved time for tests, docs, refactors you'd defer otherwise (Rain Paharia: “code that uses LLMs extensively had better be the best code on the planet”).
+
+### Values (adapted from Oxide RFD 576)
+
+Use these as a sanity check when deciding how hard to lean on AI for a slice:
+
+| Value | For you | In practice |
+|-------|---------|-------------|
+| **Responsibility** | You own merged artifacts | Self-review before asking anyone else to review; no “the model wrote it” |
+| **Rigor** | AI should sharpen thinking, not replace it | Spec + tests + written plans; reject generated flotsam |
+| **Empathy** | Humans read your PRs, bugs, docs | Short diffs; honest bug reports; don't flood maintainers with slop |
+| **Teamwork** | Trust beats disclosure theater | Fix review comments yourself; don't wholesale re-generate the PR (breaks iterative review — RFD 576) |
+| **Urgency** | Speed is real but not supreme | Faster interplay is good; **direction** and **verification** still come first |
+
+### Pattern-first, then amplify
+
+One of the highest-signal uses from Oxide's experience: **you** do the hard thinking once — unsafe core, migration design, API shape — then the model **replicates the pattern** (doc tests across four map types, migration guide applied repo-by-repo). That's not vibe coding; that's a **pattern amplification machine** with a human-defined template.
+
+Workflow:
+
+1. Handwrite or deeply review the **first instance** (the pattern).
+2. Write the replication rules in a **guide** — direction doc, migration section, or `codingprocess.md` — clear enough that you and the model can follow them.
+3. Point the model at **one repo or module**; review; **fix the guide**, not just the code.
+4. Repeat with verification signals: **compile, tests, diff checks** (OpenAPI diff, golden files, whatever your project uses).
+
+English (or your spec language) becomes a programming language for programs too messy for a deterministic tool — but only after **you** did the design work.
+
+### Self-review and the review loop
+
+From [RFD 576 § LLMs as programmers](https://rfd.shared.oxide.computer/rfd/0576#_llms_as_programmers):
+
+- **Self-review is mandatory** — don't ask a human to review code you haven't read.
+- **Closer to what ships → more care** — experimental scratch OK; core paths get planning pass + tests + your diff line-by-line.
+- **No wholesale re-generation during review** — address comments surgically; re-prompting the whole file makes review impossible.
+- **Resist LLM dependency to comprehend the system** — if only the model can explain your repo, you don't own it (“gavage geese” — force-fed complexity).
+
+Put self-review in `codingprocess.md` if you delegate anything to unattended passes.
+
+### Write things down (LLM multiplier)
+
+Culture that values **written design** pays twice in the LLM age:
+
+- Direction docs, migration guides, and RFD-shaped notes give models **texture** (David Crespo: agents pulling repo context beat one-sentence prompts).
+- You already maintain `phase.md`, `codingprocess.md`, specs — those are leverage, not bureaucracy.
+- **Don't let the model write your thinking** for standards, specs, or architecture; let it read what **you** wrote and execute slices.
+
+Rain's advice for early-career engineers: practice writing; feed it to the model and see how it behaves — timeless skill, higher multiplier now.
+
+### Where rigor beats speed (quick map)
+
+| Context | Lean | Why |
+|---------|------|-----|
+| Core behavior / security / concurrency | Planning pass, heavy review | RFD: spiral into nonsense is easy |
+| Throwaway CLI, one-off script, blog generator | Interplay OK | Low blast radius (Adam's static site) |
+| Tedious replication after you defined pattern | Model amplify + tight verification | Rain's map APIs / migration guides |
+| Bug you’d have closed as “stale” | Model-assisted investigation + **your** judgment | Podcast SIGTTOU example — rigor you wouldn't afford manually |
+
+### Anti-patterns (Cantrill / RFD / podcast)
+
+- **Lines-of-code per day** as success metric — assess literature by the pound.
+- **LLM mandates** — use when it helps; not because exec said so (RFD anti-pattern).
+- **Persona anthropomorphization** — the model isn't accountable; you are (RFD; aligns with no “world-class expert” prompts here).
+- **Regenerate the whole PR** to address review — kills teamwork.
+- **Skip reading** because the summary sounded confident — intellectual fly open ([Cantrill, 2025](https://bcantrill.dtrace.org/2025/12/05/your-intellectual-fly-is-open/)).
 
 ---
 
@@ -1007,6 +1191,8 @@ Use models where they pay rent:
 | `idk.md` and deviation hygiene | Commits without explicit permission |
 | **Interplay** top-offs: wire modules, finish functions, skinny implementation-plans | Interplay without chunk reports or full-repo refactors in a side panel |
 | Slice **implementation-plans** after direction docs exist | Implementation-plans that replace `SPEC.md` or skip gates |
+| Keeping diffs small and reviewing soon after generation | Letting the model “clean up” adjacent files every slice |
+| **Pattern replication** after you defined the first instance (doc tests, migrations) | Vibe-coding the core design you never understood |
 
 **Documentation** is the highest-signal use: AI drafts, you verify against spec and public boundary, then ship via normal docs workflow.
 
@@ -1075,6 +1261,13 @@ Align your prompts and `codingprocess.md` with **that shape**, not with Pro issu
 17. **Use planning-pass handoffs in interplay** — keep side-panel replies short.
 18. **Batch silent edits** in dual work — report each chunk before the next.
 19. **Interplay without a named slice** when the direction doc does not tell you where in the tree.
+20. **Accept drive-by refactors or whole-file rewrites** when the slice didn't ask for them — main source of avoidable churn.
+21. **Land large PRs** because generation is fast — conflict rate and review load scale with diff size.
+22. **Skip diff review** because the model “said it passed” — rework shows up days later in churn metrics.
+23. **Vibe-code shipping paths** — regenerate until lucky without reading the middle.
+24. **Brag or optimize for LOC/day** — false industriousness; virtuous laziness is smaller, clearer systems.
+25. **Wholesale re-generate** to address review comments — fix surgically; keep review iterable.
+26. **Ask humans to review** code you haven't self-reviewed (RFD 576 shape).
 
 ---
 
@@ -1092,6 +1285,8 @@ Align your prompts and `codingprocess.md` with **that shape**, not with Pro issu
 - [ ] Git: only if allowed — correct branch, Conventional Commit, `Co-authored-by`
 - [ ] No secrets committed
 - [ ] Handoff lists files, verification, blockers, remaining work
+- [ ] Diff size matches the slice — no drive-by files; escalate if scope exploded
+- [ ] Self-reviewed every line you expect someone else to read; no vibe-merge on core paths
 
 ### Interplay (after each panel chunk or when pausing)
 
@@ -1112,7 +1307,7 @@ Align your prompts and `codingprocess.md` with **that shape**, not with Pro issu
 
 ### One-line policy
 
-**Sit-and-plan when the attack is unclear; interplay in small chunks when direction already shows the tree. Maintain `codingprocess.md` for the model; keep `.status.txt` honest when a slice lands; verify with commands; keep public/private separate; you own git unless you delegated commits with Conventional Commits and co-author attribution.**
+**Sit-and-plan when the attack is unclear; interplay in small chunks when direction already shows the tree. Supply the virtuous laziness models lack — simpler systems, not bigger diffs. Maintain `codingprocess.md` for the model; keep `.status.txt` honest when a slice lands; verify with commands; you own git unless you delegated commits with Conventional Commits and co-author attribution.**
 
 ### Standards Basis
 
@@ -1156,6 +1351,22 @@ Primary references used to shape this document:
   https://arxiv.org/abs/2503.02400
 - Sarkar et al., *What is it like to program with artificial intelligence?* (2022)  
   https://advait.org/publications-web/sarkar-2022-programming-ai/
+- Xiao et al., *Self-Admitted GenAI Usage in Open-Source Software* (2025)  
+  https://arxiv.org/abs/2507.10422
+- Mao et al., *A Large-Scale Empirical Study of AI-Generated Code in Real-World Repositories* (2026)  
+  https://arxiv.org/abs/2603.27130
+- Ogenrwot & Businge, *How AI Coding Agents Modify Code* (MSR '26)  
+  https://arxiv.org/abs/2601.17581
+- Ogenrwot & Businge, *AgenticFlict: Merge Conflicts in AI Agent PRs* (AIware '26)  
+  https://arxiv.org/abs/2604.03551
+- GitClear, *Coding on Copilot: Downward Pressure on Code Quality* (2024, industry report)  
+  https://www.gitclear.com/coding_on_copilot_data_shows_ais_downward_pressure_on_code_quality
+- Cantrill, *The peril of laziness lost* (2026)  
+  https://bcantrill.dtrace.org/2026/04/12/the-peril-of-laziness-lost/
+- Cantrill, *Using LLMs at Oxide* (RFD 576, 2026)  
+  https://rfd.shared.oxide.computer/rfd/0576
+- *Oxide and Friends*, *Engineering Rigor in the LLM Age* (2026)  
+  https://oxide-and-friends.transistor.fm/episodes/engineering-rigor-in-the-llm-age/transcript
 
 ---
 
