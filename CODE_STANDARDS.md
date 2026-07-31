@@ -2,8 +2,8 @@
 
 > A Manual for Writing Rust That Ages Well Instead of Exploding Into 1,000-Line Files
 
-**Document Version:** 1.4.0  
-**Last Updated:** 2026-03-24  
+**Document Version:** 1.5.0  
+**Last Updated:** 2026-07-31  
 **Audience:** Future me, collaborators, contributors, and any poor bastard touching my code later  
 **Scope:** Cross-project standards for Rust-first codebases, with some general engineering rules that apply anywhere
 
@@ -51,6 +51,7 @@
 8. **The standard library is the baseline.** Reach for external crates when they clearly earn their keep, not because cargo makes it easy.
 9. **No hidden control flow.** Inputs, exits, allocations, and mutations should be visible where they matter.
 10. **Correctness beats ergonomic sugar.** Convenience is good only when it preserves contracts, local reasoning, and honest semantics.
+11. **Reuse over reinvention.** Reach for what is already in your dependency tree before building custom machinery. Minimizing dependencies and minimizing invented solutions are two sides of the same coin.
 
 ### Design Intent
 
@@ -265,6 +266,19 @@ Rules:
 - prefer many safe steps over one dramatic step
 
 If the system is broken for days, that is not refactoring. That is restructuring under risk.
+
+### Minimize Invented Solutions and Maximize Dependency Leverage
+
+Minimizing external dependencies is crucial, but minimizing *invented solutions* to problems your dependencies already solve is equally essential.
+
+Before writing custom workarounds, wrappers, or state-management logic, inspect what your current dependency tree already provides. Reinventing functionality that an underlying crate already handles wastes cognitive thinking budgets, inflates code churn, and breeds subtle runtime bugs by fighting the library's internal execution model.
+
+Rules:
+
+- **Understand crate execution models:** Study the rendering, memory, caching, or concurrency guarantees of your dependencies before layering manual fixes over them.
+- **Do not fight framework mechanisms:** For example, in a terminal UI application (`orbit-tui`), manually invoking explicit screen clears (`terminal.clear()`) inside a frame render loop when using a double-buffered TUI crate (such as `ratatui` or similar render engines) destroys double-buffering benefits, introduces visual flickering, and churns code—the rendering crate already diffs memory buffers and manages redrawing in the background.
+- **Reuse existing tree capabilities:** Before implementing a custom cache, state tracker, or signal handler, check if `std` or existing workspace crates already expose that capability natively or via feature flags.
+- **Protect thinking budgets and minimize churn:** Invented code is code that must be written, reviewed, tested, and maintained. Maximal reuse of established dependency primitives keeps PR diffs small and cognitive overhead low.
 
 ---
 
@@ -1190,6 +1204,16 @@ Before adding a crate, ask:
 
 New dependencies should be justified in review, especially foundational ones.
 
+### Maximize Dependency Tree Leverage & Avoid Invented Solutions
+
+Adding new crates blindly adds debt, but ignoring what is *already present* in your dependency tree to write home-grown workarounds adds double the debt.
+
+Before implementing a custom helper, runtime hack, or workaround:
+
+1. **Audit `Cargo.lock` and existing dependencies:** Is there already a crate in the tree (or a feature flag in an existing dependency) that handles this out of the box?
+2. **Respect internal crate semantics:** Avoid adding manual resets, force-clears, or custom mutexes on top of abstractions that already manage those lifecycle phases internally.
+3. **Measure code churn and review budget:** Reinventing wheel logic inflates patch size and wastes maintainer review budget. If 5 lines of idiomatic library calls replace 80 lines of custom orchestration, use the library calls.
+
 ### Dependency Health Policy
 
 Dependencies are part of the codebase.
@@ -1688,6 +1712,12 @@ Before merging, ask:
 - Are benchmarks or measurements present where they should be?
 - Does the dependency or feature choice carry a size or compile-time cost?
 
+### Dependency & Reuse
+
+- Does the change leverage existing capabilities in the dependency tree rather than inventing custom workarounds?
+- Does it respect the internal execution model of underlying crates (e.g., avoiding redundant frame clears on double-buffered UI renderers, avoiding unnecessary custom wrappers)?
+- Does it minimize code churn and cognitive review budget by leveraging existing abstractions?
+
 ### Hygiene
 
 - Any new warnings?
@@ -1719,6 +1749,8 @@ Before merging, ask:
 - cargo-cult patterns copied from old blog posts
 - premature workspace splits
 - clever lifetimes used to avoid designing a cleaner ownership model
+- fighting a dependency's internal execution model (e.g. adding manual terminal clears on top of a double-buffered TUI renderer, manual memory flushes on cached streams)
+- inventing home-grown workarounds for mechanics already provided by crates in the dependency tree
 
 ---
 
@@ -1881,6 +1913,7 @@ This standard boils down to this:
 - isolate unsafe and platform-specific code
 - avoid shadowing and hidden global state
 - add dependencies only when they earn their cost
+- leverage existing dependency tree capabilities to avoid invented solutions, reduce code churn, and preserve cognitive budget
 
 Write code that future you can scan in one pass without cursing your own name.
 
