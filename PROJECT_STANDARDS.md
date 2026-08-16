@@ -3,48 +3,27 @@
 > A Manual for Maintaining Sensible Git Discipline Without Sacrificing Productive Chaos
 
 **Document Version:** 1.5.0  
-**Last Updated:** 2026-05-30  
+**Last Updated:** 2026-08-15  
 **Audience:** Future me, contributors, and anyone brave enough to work on these projects
-
-> [!WARNING]
-> **Examples are illustrative, not prescriptive**
-> File paths, commands, binaries, and tooling in this document (e.g. `fsel`, `cargo`, `Cargo.toml`, `fsel.1`, `flake.nix`, `RELEASELOG.md`) are **examples** from real projects. Your repo may use different names, layouts, build systems, licenses, or release artifacts. Follow the *workflow rules* here; substitute your project's actual files and commands wherever examples appear.
-
----
-
-## Scope & Customization
-
-This file is the **generic canonical standard** — a reusable base for repos that share the same Git workflow. It stays project-agnostic except where concrete examples clarify the rules.
-
-**Per-repo customization**
-
-- Repos with stronger differences (other languages, monorepos, different release layout, etc.) may maintain their **own customized copy** of `PROJECT_STANDARDS.md`. That copy overrides this generic version for that repo.
-- Other documents may exist alongside this one in any given repo (e.g. `CODE_STANDARDS.md`, `SPEC.md`, `CONTRIBUTING.md`, `USAGE.md`, `phase.md`, audit templates). Which files exist and what they contain is **repo-specific**; absence or extra files is normal.
-- Do **not** rewrite this generic document to match one project's paths, license, tooling, or metadata when working elsewhere. Do **not** "restore" project-specific content into the generic standard unless explicitly asked to update the template itself.
-
-**For agents and editors**
-
-When updating standards docs, change only what the task requests. Do not bulk-replace example names, revert license or `Last Updated` metadata, deduplicate unrelated sections, or merge in another project's fork of this file unless that is the stated goal.
 
 ---
 
 ## Table of Contents
 
-1. [Scope & Customization](#scope--customization)
-2. [Philosophy & Principles](#philosophy--principles)
-3. [Related Documentation](#related-documentation)
-4. [Branching Strategy](#branching-strategy)
-5. [Workflow Overview](#workflow-overview)
-6. [Feature Branch Development](#feature-branch-development)
-7. [Commit Discipline](#commit-discipline)
-8. [Pull Request Process](#pull-request-process)
-9. [Code Review & Collaboration Standards](#code-review--collaboration-standards)
-10. [Release Management](#release-management)
-11. [Versioning Scheme](#versioning-scheme)
-12. [Documentation Standards](#documentation-standards)
-13. [What Not To Do](#what-not-to-do)
-14. [Example Workflows](#example-workflows)
-15. [Tooling & Automation](#tooling--automation)
+1. [Philosophy & Principles](#philosophy--principles)
+2. [Related Documentation](#related-documentation)
+3. [Branching Strategy](#branching-strategy)
+4. [Workflow Overview](#workflow-overview)
+5. [Feature Branch Development](#feature-branch-development)
+6. [Commit Discipline](#commit-discipline)
+7. [Pull Request Process](#pull-request-process)
+8. [Code Review & Collaboration Standards](#code-review--collaboration-standards)
+9. [Release Management](#release-management)
+10. [Versioning Scheme](#versioning-scheme)
+11. [Documentation Standards](#documentation-standards)
+12. [What Not To Do](#what-not-to-do)
+13. [Example Workflows](#example-workflows)
+14. [Tooling & Automation](#tooling--automation)
 
 ---
 
@@ -74,13 +53,11 @@ This workflow accommodates:
 
 ## Related Documentation
 
-This document defines the technical Git workflow. Individual repos may include some or all of the following; names and presence vary:
+This document defines the technical Git workflow. See also:
 
-- **CONTRIBUTING.md** — contributor setup and templates (if present)
-- **README.md** — project overview and quick start
-- **USAGE.md** — detailed user documentation (if present)
-- **CODE_STANDARDS.md** — code quality and structure (if present)
-- **SPEC.md** or other planning docs — product or technical spec (if present)
+- **[CONTRIBUTING.md](./CONTRIBUTING.md)** - Contributor guide for external contributors (setup, standards, templates)
+- **[README.md](./README.md)** - Project overview and quick start
+- **[USAGE.md](./USAGE.md)** - Detailed user documentation
 
 ---
 
@@ -219,7 +196,6 @@ git checkout -b feat/detach-mode
 - "wip" and "temp fix" are valid local commits.
 - Code explains *what*, commits should explain *why*.
 - Work offline freely — rebase and clean up later.
-- **When you're online and actively coding**, open a **draft PR** early and push commits to it instead of working in silence. That gives the team visibility so nobody else starts the same work in parallel. Silence on a branch is how duplicate effort happens.
 
 Example:
 
@@ -244,7 +220,13 @@ Before opening a PR:
    git rebase -i origin/dev
    ```
 
-3. Run all checks using your project's standard commands (e.g. for Rust: `cargo fmt`, `cargo clippy`, `cargo test`, `cargo build --release`).
+3. Run all checks:
+   ```bash
+   cargo fmt
+   cargo clippy
+   cargo test
+   cargo build --release
+   ```
 
 4. Push branch:
    ```bash
@@ -343,9 +325,9 @@ Brief description of what this PR does and why.
 - Updated documentation
 
 ## Testing
-1. Build with your project's release command (e.g. `cargo build --release`)
-2. Exercise the changed behavior manually or with automated tests
-3. Confirm user-facing docs match the new behavior
+1. Build with cargo build --release
+2. Run fsel --cclip and verify tags appear
+3. Test tag persistence across sessions
 
 ## Breaking Changes
 None
@@ -356,12 +338,10 @@ Closes #42
 
 ### Draft Pull Requests
 
-Use draft PRs for early feedback and visibility:
-- **Default when online:** open a draft PR as soon as you start meaningful work on a branch, then keep pushing commits. Others can see you're on it before they pick up overlapping tasks.
-- Open as draft when code is incomplete but you want early review or coordination
+Use draft PRs for early feedback:
+- Open as draft when code is incomplete but you want early review
 - Mark ready for review when complete
 - Useful for architectural discussions before full implementation
-- Working only on a local branch with no PR is fine for short offline bursts; for sustained online work, prefer a draft PR so the repo doesn't look idle while two people unknowingly build the same thing
 
 ### Work-in-Progress PRs
 
@@ -444,7 +424,8 @@ Example response to contributor:
 
 ### Sanity Checks
 
-Integrate automated checks appropriate to your stack (e.g. for Rust: `cargo fmt`, `cargo clippy`)
+Integrate automated checks:
+- `cargo fmt`, `cargo clippy`
 - Commit message linter (optional)
 - GitHub branch protection:
   - Require 1 review before merge (for code PRs; docs PRs to main may be configured per preference)
@@ -468,32 +449,125 @@ A maintainer creates a release branch when:
 
 ### Preparation
 
-> [!NOTE]
-> **Example release prep files**
-> The file list below uses common Rust/Nix layout as an example. Your repo may use different paths (monorepo `Cargo.toml`, `man/elda.1`, `package.json`, etc.). Update whatever files in *your* repo carry version or release metadata.
+Throughout this section, replace `3.0.0-kiwicrab` with the version you are releasing and `3.6.0` with the **previous** release tag. Every step runs locally unless stated otherwise.
 
-1. **Merge main into dev** so dev has the latest docs (docs live on main and are synced to dev via main → dev).
-2. Ensure all feature PRs for the release are merged into dev.
-3. Confirm all tests pass on dev.
-4. Create a release branch from dev (this freezes the release point):
-   ```bash
-   git checkout dev
-   git pull origin dev
-   git checkout -b release/v3.0.0-kiwicrab  # Replace with actual version
-   ```
-5. Update version references on the release branch (examples — use your repo's actual files):
-   - `Cargo.toml` (root or workspace manifest)
-   - `flake.nix` or other packaging manifests
-   - `README.md` (installation instructions, if needed)
-   - Man pages (e.g. `fsel.1`, `man/elda.1`, or similar)
-   - Example configs if they contain version info
-6. Commit version bump:
-   ```bash
-   git commit -am "chore: bump version to 3.0.0-kiwicrab"
-   ```
-7. Prepare release notes using the [Release body template](#release-body-template) below; update **RELEASELOG.md** on the release branch with the release title and body, adding a `---` separator above the previous release(s).
-8. Verify [Semantic Versioning 2.0.0](https://semver.org/) compliance.
-9. Run final tests on the release branch using your project's standard commands (e.g. `cargo test`, `cargo build --release`).
+**1. Merge main into dev** so dev has the latest docs (docs live on main and are synced to dev via main → dev).
+
+```bash
+git checkout dev
+git pull origin dev
+git fetch origin main
+git merge origin/main
+git push origin dev
+```
+
+**2. Confirm every PR for this release is merged into dev.** Nothing still open should be release-blocking.
+
+```bash
+gh pr list --base dev --state open        # anything here is NOT in this release
+git log --oneline 3.6.0..dev              # what actually landed since the last tag
+```
+
+**3. Confirm dev is green** before you freeze it.
+
+```bash
+cargo fmt --check
+cargo clippy -- -D warnings
+cargo test
+cargo build --release
+```
+
+If any of these fail, fix it **on dev** through a normal PR before creating the release branch. Do not carry a known-red dev into a release branch and patch it there.
+
+**4. Create the release branch from dev.** This freezes the release point; dev keeps accepting PRs afterwards without affecting the release.
+
+```bash
+git checkout dev
+git pull origin dev
+git checkout -b release/v3.0.0-kiwicrab
+git push -u origin release/v3.0.0-kiwicrab
+```
+
+**5. Update every version reference on the release branch.**
+
+- `Cargo.toml` — `version = "3.0.0-kiwicrab"`
+- `Cargo.lock` — regenerate, never hand-edit: `cargo build`
+- `flake.nix` — both the top-level `description` and the package `version`/`meta.description`
+- `README.md` — `cargo install fsel@…` lines (install and update variants)
+- `USAGE.md` — the version printed in sample debug output
+- Man page (`fsel.1`)
+- Example configs, if they carry version info
+
+Catch stragglers before you commit:
+
+```bash
+grep -rn "3\.6\.0" --exclude-dir=.git --exclude-dir=target --exclude=RELEASELOG.md .
+```
+
+RELEASELOG.md is excluded on purpose — historical entries keep their original version numbers.
+
+**6. Verify the docs match the CLI surface that actually shipped.** Every flag, config key, and keybind added this cycle must appear in **all** of `--help`, `fsel.1`, and `USAGE.md`/`README.md`.
+
+```bash
+cargo build --release
+./target/release/fsel --help        # compare against fsel.1 and USAGE.md
+man ./fsel.1
+git diff 3.6.0..HEAD -- src/cli/help.rs fsel.1 USAGE.md README.md
+```
+
+This is the single most commonly missed step. A PR can pass review with `--help` updated and the man page untouched, and nobody notices until after the tag exists. Fixing docs here is fine — docs are exactly what release branches are for.
+
+**7. Write the release notes into RELEASELOG.md** using the [Release body template](#release-body-template) below. Prepend the new block at the top of the file with a `---` separator above the previous entry. Do this **before** committing so the version bump and the log entry land as one coherent state.
+
+Gather the material from the actual range — do not write from memory:
+
+```bash
+git log --oneline 3.6.0..HEAD
+git diff --stat 3.6.0..HEAD
+gh pr list --base dev --state merged --limit 30
+gh pr view 93                                  # per PR: body, review discussion, commits
+gh pr view 93 --json commits,reviews,comments
+```
+
+Read the diffs, not just the commit subjects. Commit messages joke, understate, and occasionally lie — a commit titled like an emergency can turn out to be a formatting fix, and a one-line subject can hide a user-visible behavior change. What a user can observe goes under Added / Changed / Fixed; what only a contributor cares about goes under Technical details.
+
+Credit **everyone** who touched the change in Contributors, not only the PR author: co-maintainers who pushed cleanup or fixup commits onto the contributor's branch get their own line with what they did, and reviewers (human or bot) get a `Code review:` line.
+
+**8. Commit the version bump and the release log together.**
+
+```bash
+git add -A
+git commit -m "chore: bump version to 3.0.0-kiwicrab"
+git push
+```
+
+One commit is preferred. If you split it, use `chore: bump version to 3.0.0-kiwicrab` and `docs: add 3.0.0-kiwicrab entry to RELEASELOG`.
+
+**9. Verify [Semantic Versioning 2.0.0](https://semver.org/) compliance** against [Versioning Scheme](#versioning-scheme). Breaking → MAJOR (and choose a new codename), new feature → MINOR, fixes only → PATCH. The tag carries the number only; the codename appears in the display version and the release title.
+
+**10. Run final checks on the release branch.**
+
+```bash
+cargo fmt --check
+cargo clippy -- -D warnings
+cargo test
+cargo build --release
+./target/release/fsel --version        # must print the new version
+```
+
+If a code-level failure shows up here, it belongs on dev, not on the release branch: fix it in dev, then merge dev into the release branch, or ship without the fix (see [Release Branches](#release-branches)).
+
+### Common Release-Prep Mistakes
+
+Real ones, from real releases:
+
+| Mistake | Consequence | Prevention |
+|---------|-------------|------------|
+| Man page not updated with a new flag | Flag ships undocumented; needs a follow-up commit after freeze | Step 6 — diff `--help` against `fsel.1` every cycle |
+| `cargo fmt` / `cargo clippy` not run before merging a PR to dev | Formatting fixups land on the release branch after the freeze | Step 3 — dev must be green *before* branching |
+| Release notes written from commit subjects only | Real user-visible changes get missed or misdescribed | Step 7 — read `git diff` and the PR discussion |
+| Only the PR author listed in Contributors | Co-maintainers and reviewers who did real work go uncredited | Step 7 — list cleanup commits and reviewers separately |
+| Version bumped in `Cargo.toml` but missed in `flake.nix`/README/USAGE | Install instructions point at the wrong version | Step 5 — `grep -rn` the old version before committing |
 
 ### Process
 
@@ -533,6 +607,24 @@ If `--ff-only` fails, rebase the **release branch** onto latest `main`, then ret
 **Release title:** Use exactly `[version-codename]` in brackets, e.g. `[3.0.0-kiwicrab]`. No date or extra text in the title.
 
 **Git tag:** Use the version number only (no codename), e.g. `3.0.0`, `2.5.0`, `2.4.0`. Create the tag on main after the release branch is merged; then create the GitHub release from that tag and paste the release body below (same content as in RELEASELOG.md for this release).
+
+**Creating it:** the body is the RELEASELOG.md block you already wrote — extract it rather than retyping, so the two never drift apart.
+
+```bash
+# Extract this release's block from RELEASELOG.md (everything above the first `---`)
+sed -n '1,/^---$/p' RELEASELOG.md | sed '$d' > /tmp/release-body.md
+
+# Create the release from the tag you pushed
+gh release create 3.0.0 \
+  --title "[3.0.0-kiwicrab]" \
+  --notes-file /tmp/release-body.md
+
+# If you attach prebuilt binaries, upload them and their checksums,
+# then add the "## Download fsel <version>" table to the release body
+gh release upload 3.0.0 fsel-x86_64-unknown-linux-gnu.tar.xz{,.sha256}
+```
+
+Verify afterwards: `gh release view 3.0.0 --web`.
 
 ### Release body template
 
@@ -659,8 +751,8 @@ If you maintain permanent branches for LTS and "next" (or similar) cycles, treat
 
 1. `README.md` — overview, install, usage
 2. `USAGE.md` — detailed guide (if needed)
-3. `LICENSE` — project license (SPDX identifier in source headers where applicable)
-4. **RELEASELOG.md** — in-repo release log (name may vary by repo; we do not keep CHANGELOG.md). On each release branch, prepend the release title and body to the release log, with a `---` separator between each release (newest at top).
+3. `LICENSE` — BSD-2-Clause or similar
+4. **RELEASELOG.md** — in-repo release log. We do not keep CHANGELOG.md. On each release branch, prepend the release title and body to RELEASELOG.md, with a `---` separator between each release (newest at top).
 
 ### Code Docs
 
@@ -796,10 +888,6 @@ For trivial typo fixes, maintainers may push directly to main and then merge mai
 ---
 
 ## Tooling & Automation
-
-> [!NOTE]
-> **Example tooling**
-> Git aliases, hooks, and CI snippets below assume a Rust project. Adapt commands and workflow files to your stack.
 
 ### Git Aliases
 
