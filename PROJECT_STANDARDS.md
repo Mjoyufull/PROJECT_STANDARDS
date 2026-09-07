@@ -2,8 +2,8 @@
 
 > A Manual for Maintaining Sensible Git Discipline Without Sacrificing Productive Chaos
 
-**Document Version:** 1.5.0  
-**Last Updated:** 2026-08-15  
+**Document Version:** 1.7.0\
+**Last Updated:** 2026-09-07\
 **Audience:** Future me, contributors, and anyone brave enough to work on these projects
 
 ---
@@ -12,18 +12,19 @@
 
 1. [Philosophy & Principles](#philosophy--principles)
 2. [Related Documentation](#related-documentation)
-3. [Branching Strategy](#branching-strategy)
-4. [Workflow Overview](#workflow-overview)
-5. [Feature Branch Development](#feature-branch-development)
-6. [Commit Discipline](#commit-discipline)
-7. [Pull Request Process](#pull-request-process)
-8. [Code Review & Collaboration Standards](#code-review--collaboration-standards)
-9. [Release Management](#release-management)
-10. [Versioning Scheme](#versioning-scheme)
-11. [Documentation Standards](#documentation-standards)
-12. [What Not To Do](#what-not-to-do)
-13. [Example Workflows](#example-workflows)
-14. [Tooling & Automation](#tooling--automation)
+3. [Repository Layout & Research](#repository-layout--research)
+4. [Branching Strategy](#branching-strategy)
+5. [Workflow Overview](#workflow-overview)
+6. [Feature Branch Development](#feature-branch-development)
+7. [Commit Discipline](#commit-discipline)
+8. [Pull Request Process](#pull-request-process)
+9. [Code Review & Collaboration Standards](#code-review--collaboration-standards)
+10. [Release Management](#release-management)
+11. [Versioning Scheme](#versioning-scheme)
+12. [Documentation Standards](#documentation-standards)
+13. [What Not To Do](#what-not-to-do)
+14. [Example Workflows](#example-workflows)
+15. [Tooling & Automation](#tooling--automation)
 
 ---
 
@@ -58,6 +59,40 @@ This document defines the technical Git workflow. See also:
 - **[CONTRIBUTING.md](./CONTRIBUTING.md)** - Contributor guide for external contributors (setup, standards, templates)
 - **[README.md](./README.md)** - Project overview and quick start
 - **[USAGE.md](./USAGE.md)** - Detailed user documentation
+
+---
+
+## Repository Layout & Research
+
+Keep the repository root easy to scan. It holds entrypoints, manifests, lockfiles,
+main documentation, and configuration that tools expect there. Put guides, examples,
+assets, fixtures, and scripts in their established locations. Avoid competing
+`doc`/`docs` or `script`/`scripts` directories and remove spent scratch output.
+
+> [!WARNING]
+> Names such as `docs/`, `examples/`, `assets/`, and `scripts/` are illustrative. Follow
+> the project's language and tool conventions, and do not add empty or single-file
+> directories merely to imitate a template.
+
+`CODE_STANDARDS.md` covers source placement. If existing documentation explains the
+layout, link it from `codingprocess.md`. Routine file moves need no separate writeup;
+the diff shows what moved.
+
+When a change needs investigation, use a research document to work through the problem
+and recommend what to do. Then update the code, documentation, or other affected work
+from those findings. Keep unresolved questions and useful next steps in that document.
+There is no required sequence of specs, plans, audits, and decision records. The
+[research guidance in AI_STANDARDS.md](./AI_STANDARDS.md#research-then-make-the-change)
+applies whether a person or an agent does the investigation.
+
+For a broad restructure, check actual dependencies and recent changes before moving
+files, and choose an order that keeps the project buildable. Work on
+[software reflexion models](https://www.cs.ubc.ca/~murphy/papers/rm/fse95.html) compares
+intended architecture with source dependencies;
+[co-change research](https://doi.org/10.1016/j.jss.2019.03.014) examines relationships
+visible in version history. Both can help test whether the proposed layout fits the
+code. [Paixao et al.](https://doi.org/10.1109/TEVC.2017.2691281) also examine the
+disruption involved in remodularization, a reason to weigh the cost of moving files.
 
 ---
 
@@ -391,6 +426,7 @@ They're conversations between equals, not bureaucratic rituals.
 |--------|-------------|
 | Correctness | The code does what it claims |
 | Clarity | Another dev can understand it |
+| Placement | New and moved files belong with the code responsible for their behavior |
 | Impact | Doesn't introduce regressions |
 | Security | No obvious vulnerabilities |
 | Style | Matches existing conventions |
@@ -946,6 +982,7 @@ This workflow forces sanity:
 - dev is your proving ground for code
 - main is sacred: releases and living docs
 - Reviews are collaborative, not confrontational
+- Keep files easy to find; investigate broad restructures before moving them
 - RELEASELOG.md and GitHub releases are the record; tags point at releases
 
 Future you: if it's 2am and you're wondering how to do this properly — do it this way. You'll thank yourself later.

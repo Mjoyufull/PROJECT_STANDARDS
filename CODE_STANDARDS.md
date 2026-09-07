@@ -3,8 +3,8 @@
 > A manual for writing Rust that ages well instead of exploding into 1,000-line files.
 > Opinionated on purpose. If you wanted a document that agrees with every blog post, go read a blog post.
 
-**Document Version:** 2.0.0  
-**Last Updated:** 2026-08-26  
+**Document Version:** 2.2.0\
+**Last Updated:** 2026-09-07\
 **Audience:** Future me, collaborators, contributors, AI agents writing code in my repos, and any poor bastard touching my code later  
 **Scope:** Cross-project standards for Rust-first codebases, with general engineering rules that apply anywhere
 
@@ -44,7 +44,7 @@ The rest of this document is what I actually want instead.
 14. [Error Handling & Failure Policy](#error-handling--failure-policy)
 15. [Testing Standards](#testing-standards)
 16. [Documentation Standards](#documentation-standards)
-17. [Architecture & Decision Records](#architecture--decision-records)
+17. [Research for Design Changes](#research-for-design-changes)
 18. [Warnings, Lints, and Hygiene](#warnings-lints-and-hygiene)
 19. [Change Size, Reviews, and Delivery](#change-size-reviews-and-delivery)
 20. [Review Standard](#review-standard)
@@ -189,6 +189,19 @@ A maintainer must be able to understand a change from the function, its signatur
 - a convention that exists only in someone's head or in a PR comment from last year
 
 Every time behavior depends on something the reader cannot see from where they are standing, you have converted a local problem into a whole-codebase problem.
+
+### Make the Relevant Code Easy to Find
+
+A reader should be able to find the code for a behavior without learning the whole
+project first. Give each responsibility one home, use paths that narrow the search,
+and keep dependencies clear enough to tell what a change will affect.
+
+This follows [Parnas's work on module boundaries](https://dl.acm.org/doi/10.1145/361598.361623)
+and [Sean Goedecke's argument about partial understanding](https://www.seangoedecke.com/in-defense-of-not-understanding-your-codebase/).
+Studies by [Ko et al.](https://doi.org/10.1109/TSE.2006.116) and
+[Piorkowski et al.](https://doi.org/10.1145/2950290.2950302) examine the effort developers
+spend finding relevant code and judging where to look next. Clear placement reduces
+the number of plausible wrong places to check.
 
 ### Duplication Is Cheaper Than the Wrong Abstraction
 
@@ -424,6 +437,10 @@ This document is grounded in official Rust references and the Rust API Guideline
 
 - Holzmann's *The Power of Ten* — rules small enough to remember and precise enough to check, bounded control flow, checked return values, warning-clean builds. The specific bans (no recursion, no dynamic allocation) belong to safety-critical avionics, not to general software; the discipline behind them travels.
 - Parnas, *On the Criteria To Be Used in Decomposing Systems into Modules* — draw boundaries around decisions likely to change, not around the chronological steps of an algorithm. This is the source of the boundary-module rule and of most of what this document says about abstraction.
+- Goedecke, *In Defense of Not Understanding Your Codebase*, and the program-comprehension work of Ko et al. and Piorkowski et al. — complete codebase knowledge is not a safe workflow assumption; names and boundaries must support local recovery.
+- Tarr et al. on the "tyranny of the dominant decomposition" — one physical tree cannot foreground every concern, so each source level needs one deliberate primary axis.
+- Silva, Valente, and Maia on co-change patterns — version history is evidence about whether directory boundaries match the reasons files change, but it is not an automatic clustering oracle.
+- Ousterhout, *A Philosophy of Software Design* — splitting code is useful only when the resulting module hides enough complexity to repay the extra interface and navigation.
 - SQLite's testing account — fault injection at successive allocation and I/O sites, compound failure, malformed state, retained regressions, mutation testing as a check on whether tests observe anything. Coverage is an evidence dimension, never an oracle.
 - Google's engineering practices on code review and small changes — the "leave it healthier than you found it" bar rather than a perfection bar.
 - Google SRE on simplicity, monitoring, release engineering, and blameless postmortems.
@@ -804,6 +821,10 @@ The reason is entirely practical: `mod.rs` gives you a project full of files tha
 
 Existing `mod.rs` files in inherited code are migrated when the module is touched for other reasons. Do not open a PR that does nothing but rename them — that is churn, and it breaks everyone's in-flight branches for no behavioral gain.
 
+`area.rs` beside `area/child.rs` is the normal modern Rust representation of an
+outlined module with children. That mechanical file/directory pair is not duplicate
+naming. `area/area.rs` and `area/area_view.rs` are.
+
 ### Every File Declares Its Job
 
 Every module file begins with a `//!` header stating what it owns, unless the file is genuinely trivial and self-evident from its name. `lib.rs` and `main.rs` always have one.
@@ -828,54 +849,94 @@ State:
 
 This is not a documentation ritual. It is how someone opening the file at 2am finds out whether they are in the right file, in five seconds instead of five minutes. Write it in the author's voice, keep it to a few lines, and update it when the module's job changes.
 
-### Directory Layout by Responsibility
+### Organize by What the Code Does
 
-Prefer directories and modules that reflect domain boundaries, not vague buckets.
+Group application code by the behavior it implements. Keep parsing, state, and rendering
+for one feature together. Separate modules for configuration, storage, or platform
+access make sense when they contain that interaction. Keep the code that wires the
+application together small.
 
-Good:
+Use one consistent grouping at each level. If both `search/` and `services/` could
+plausibly hold the same search code, the layout leaves ownership unresolved. Choose
+where it belongs. A compiler or library will use different names, but the same rule
+applies. Explain unusual divisions briefly in the crate docs.
 
-```text
-src/
-  config/
-  cli/
-  parser/
-  ui/
-  db/
-  protocol/
-```
-
-Bad:
+> [!WARNING]
+> The following `Northstar` tree is illustrative. These names are not required in every
+> project.
 
 ```text
 src/
-  utils.rs
-  helpers.rs
-  misc.rs
-  stuff.rs
-  common.rs
-  types.rs
+  app.rs
+  catalog.rs
+  catalog/
+    discover.rs
+    ranking.rs
+  chooser.rs
+  chooser/
+    filter.rs
+    render.rs
+  settings.rs
+  platform.rs
 ```
 
-`types.rs` deserves its own mention: a file that holds all the types, separated from all the behavior, is not organization. It is the data/behavior split that object orientation spent thirty years arguing about, imposed by accident. Types live with the code that maintains their invariants.
+`chooser/render.rs` tells you which rendering code is there. A project-wide `render/`
+directory needs a separate responsibility to justify splitting features across it.
 
-`utils.rs` is allowed if it is truly small, truly generic, and truly stable. It is on probation permanently. The moment its contents stop having anything in common, split it by actual purpose.
+### Give Each Responsibility One Home
 
-### When to Create a New File
+A concept belongs with the code responsible for keeping it correct:
 
-Create a new file when **one** of these is true:
+- types live beside the code that establishes and preserves their invariants
+- feature-specific parsing, rendering, events, and state stay with that feature
+- external representations are converted at the boundary that receives them
+- shared code is named for the specific service or operation it provides
+- small lookalike code stays duplicated until it has the same reason to change
 
-- the file holds more than one responsibility
-- it is growing past the size limits below
-- a concept became important enough to deserve a name
-- the tests for a concept would be clearer beside their own module
-- the module has children and wants a stable top-level API
-- navigation is getting slow because everything lives in one place
+Do not put code in `common`, `core`, `helpers`, `utils`, `types`, `models`, `services`,
+or `misc` because you have not worked out where it belongs. If two modules both appear
+responsible, settle that overlap before adding another place to look.
 
-Do **not** create a new file when:
+### Where New Code Goes
 
-- it would hold one tiny helper with no meaningful boundary
-- it would force readers through five files to understand one function
-- the split is by syntax (all the structs here, all the impls there) rather than by responsibility
+Start in the file already responsible for the behavior. Create another file when it
+has a distinct job that can be understood and changed together, a specific name, and
+details that callers should not need to know. Check that its imports do not create a
+cycle. File length alone does not justify spreading one operation across several files.
+
+### Depth, Fan-Out, and Names
+
+Use these defaults for hand-written source:
+
+- no more than two semantic module segments below the crate root:
+  `crate::area::concept`
+- no more than eight immediate child modules under one parent
+- no directory created solely to hold one child file
+- no repeated context such as `chooser/chooser_filter.rs`
+- no vague filename that could accept unrelated future code
+
+These limits are project defaults. If generated code, a protocol, or platform support
+needs more depth or children, explain the exception briefly in the module header or
+existing documentation. The numbers are our choice, not a result established by the
+cited research.
+
+Read the full path aloud. Each segment must narrow the meaning. `chooser/filter.rs`
+does; `core/common/helpers.rs` does not.
+
+### Keep Dependencies Clear
+
+Check imports when dividing modules:
+
+- no dependency cycles between top-level areas
+- nothing imports the composition root
+- domain values do not depend on CLI, UI, storage, or process representations
+- convert external types at their boundary before they spread
+- do not use a convenience re-export to conceal the actual owner
+- do not invent a one-implementor trait merely to make a dependency diagram look pure
+
+If two top-level modules import each other, check whether a shared concept is in the
+wrong place or whether the modules should be one. Resolve the cycle before extending
+that part of the tree.
 
 ### Boundary Modules
 
@@ -887,6 +948,14 @@ Any module that talks to the outside world — a database, a terminal, a foreign
 - be the only place that touches that external thing
 
 This is the single most valuable structural rule in this document. Get it right and the rest of the codebase stays readable regardless of how unpleasant the library is. Get it wrong and transaction guards, `unsafe`, `cfg` blocks, and `libc` types leak into your business logic and never leave.
+
+### Tests Follow Behavior
+
+Unit tests stay in or directly beside the module they verify. Do not create a directory
+solely to move one module's tests into `tests.rs`, and do not mirror the entire source
+tree under `tests/`. Integration tests are grouped by user-visible workflow or contract;
+the existing one-binary preference still applies unless isolation has a measured
+benefit.
 
 ### When to Create a Workspace
 
@@ -1572,43 +1641,21 @@ Docs should not quietly rot.
 
 ---
 
-## Architecture & Decision Records
+## Research for Design Changes
 
-Code alone does not preserve the reasoning behind important decisions.
-For significant design choices, create a decision record.
+When a design choice needs investigation, write down the research: what the code does
+now, the evidence you found, the important tradeoffs, and what you recommend changing.
+Use that to update the implementation and the documentation people already read.
 
-### When to Write a Decision Record
+This matters especially for changes that are costly to undo: public APIs, storage
+formats, dependency choices, concurrency, or large moves between modules. Test the
+assumptions that affect the choice. Explain any migration and how to verify it in the
+same research document when needed.
 
-Write a decision record for changes that affect:
-
-- architecture or system shape
-- dependencies and frameworks
-- APIs and published contracts
-- storage formats and migrations
-- operational constraints
-- security or compliance posture
-- build, release, or development process
-
-### Minimum Record Format
-
-Every decision record should capture:
-
-- context
-- decision
-- alternatives considered
-- consequences and tradeoffs
-- status
-- owner
-
-### Decision Record Rules
-
-- keep records short and readable
-- store them with the repo, typically under `docs/adr/` or `decisions/`
-- accepted records are not silently rewritten; create a new one that supersedes the old one
-- link code reviews and follow-up changes back to relevant records
-
-ADRs are not bureaucracy.
-They prevent the same arguments from being re-fought every three months.
+Keep lasting explanations close to the affected code or in existing project docs.
+Routine file placement needs no separate record. Follow the
+[research workflow](./AI_STANDARDS.md#research-then-make-the-change) for unresolved work;
+there is no required ADR directory or spec-to-plan sequence.
 
 ---
 
@@ -2092,7 +2139,7 @@ Use async when you have **many concurrent I/O-bound operations whose completion 
 
 ### Runtime Policy
 
-- One runtime, chosen deliberately, named in a decision record if the project is nontrivial.
+- One runtime, chosen deliberately; explain any non-obvious requirement in the crate docs.
 - Do not write abstraction layers over runtimes. You will not switch, and if you do, the abstraction will not survive contact with the switch.
 - Do not enable runtime features you do not use. `tokio` with `features = ["full"]` is a compile-time and binary-size decision you made by not thinking about it.
 - `block_on` appears at boundaries, in `main`, or in a test. It does not appear inside library code and it never appears inside async code.
@@ -2681,10 +2728,13 @@ Before merging, ask:
 
 ### Structure
 
-- Is the file boundary sane?
+- Does the code live under the one module that owns its invariant or reason to change?
+- Can its path be predicted from the behavior, and does every segment add information?
+- Does a new file hide a real decision, or merely split one behavior into more places?
+- Did the change deepen the tree, overload a parent, create a vague bucket, or introduce
+  a top-level dependency cycle?
 - Is the function length sane?
 - Is the abstraction level consistent?
-- Is there a missing module split?
 - Does async code avoid holding locks, guards, or broad mutable state across `.await`?
 
 ### API Quality
@@ -2750,11 +2800,15 @@ Before merging, ask:
 
 ### Hard Bans
 
-These are findings, not opinions. A PR containing one of these does not merge without a written, accepted justification in the PR body.
+An exception needs an accepted reason in the module header or existing project docs.
 
 | Banned | Why |
 | --- | --- |
 | `mod.rs` in new code | Every file in the project ends up named `mod.rs`; filenames stop carrying information |
+| A new vague catch-all (`common`, `core`, `helpers`, `utils`, `types`, `models`, `services`, `misc`) | Leaves the code's responsibility unclear |
+| Repeated path meaning (`chooser/chooser_filter.rs`, `catalog/catalog.rs`) | Repeats context instead of narrowing the search |
+| A new dependency cycle between top-level areas | Makes changes depend on both areas at once |
+| A hand-written directory created only for one child | Adds a directory without grouping anything |
 | Macros to avoid typing, or to hide control flow | An undocumented private language with worse tooling, on your build critical path |
 | A trait with exactly one implementor, written speculatively | Indirection with no polymorphism; a struct with extra steps |
 | Ambient globals, mutable statics, thread-locals, or lazy singletons as inputs | Destroys local reasoning; makes signatures lie |
@@ -2982,6 +3036,8 @@ If you remember nothing else:
 - **Compiling is not correct.** Read the failure path, the cancellation path, and the empty-input path before you claim it works.
 - **Explicit over implicit, always, unless it is tautological.** No hidden control flow, no hidden allocation, no hidden blocking, no hidden authority, no hidden termination.
 - **Every file says what it handles.** `//!` at the top, stating the responsibility and the invariant.
+- **Give each responsibility one home.** Use paths that help readers find it and keep
+  dependencies clear.
 - **No `mod.rs`.** No macros to avoid typing. No one-implementor traits. No ambient globals. No unbounded queues.
 - **Read the dependency tree before you write machinery.** The thing you are about to build is probably already there, and deleting your version is the best patch you will write this week.
 - **Confine the ceremony to boundary modules.** The library's ugliness stops at the edge; domain code speaks domain types.
@@ -3001,7 +3057,8 @@ If you remember nothing else:
 - use stable, current Rust; keep the toolchain moving
 - keep `main.rs` thin and `lib.rs` doing the work
 - keep files, functions, and diffs small
-- split by responsibility, never by syntax
+- group code consistently by responsibility
+- keep trees shallow, names non-repeating, and top-level dependencies acyclic
 - prefer explicit inputs over ambient magic
 - encode invariants in types; use typestate when it removes real misuse
 - keep names honest about ownership, allocation, mutation, blocking, and cost
@@ -3011,7 +3068,7 @@ If you remember nothing else:
 - write the regression test that would have caught the bug you just fixed
 - document public behavior and non-obvious modules
 - treat MSRV, public APIs, and feature flags as compatibility contracts
-- record important technical decisions before you forget the alternatives
+- investigate uncertain design choices and keep useful explanations with the work
 - keep warnings at zero and lint suppressions narrow and explained
 - keep dependencies healthy, pruned, and justified
 - choose boring, reversible designs
@@ -3091,12 +3148,6 @@ Primary references used to shape this document:
   https://sre.google/sre-book/release-engineering/
 - AWS Well-Architected: operational excellence  
   https://docs.aws.amazon.com/wellarchitected/latest/framework/operational-excellence.html
-- AWS Prescriptive Guidance: architectural decision records  
-  https://docs.aws.amazon.com/prescriptive-guidance/latest/architectural-decision-records/welcome.html
-- AWS Prescriptive Guidance: ADR process  
-  https://docs.aws.amazon.com/prescriptive-guidance/latest/architectural-decision-records/adr-process.html
-- AWS Prescriptive Guidance: ADR best practices  
-  https://docs.aws.amazon.com/prescriptive-guidance/latest/architectural-decision-records/best-practices.html
 - The Twelve-Factor App  
   https://12factor.net/
 - The Twelve-Factor App: config  
@@ -3136,12 +3187,20 @@ Primary references used to shape this document:
 - insta  
   https://github.com/mitsuhiko/insta
 
-Additional sources behind the 2.0 revision:
+Additional sources behind the 2.x revisions:
 
 - Holzmann, *The Power of Ten: Rules for Developing Safety-Critical Code*  
   https://spinroot.com/gerard/pdf/P10.pdf
 - Parnas, *On the Criteria To Be Used in Decomposing Systems into Modules*  
   https://dl.acm.org/doi/10.1145/361598.361623
+- Sean Goedecke, [*In Defense of Not Understanding Your Codebase*](https://www.seangoedecke.com/in-defense-of-not-understanding-your-codebase/)
+- Ko et al., [*An Exploratory Study of How Developers Seek, Relate, and Collect Relevant Information during Software Maintenance Tasks*](https://doi.org/10.1109/TSE.2006.116)
+- Piorkowski et al., [*Foraging and Navigations, Fundamentally: Developers' Predictions of Value and Cost*](https://doi.org/10.1145/2950290.2950302)
+- Tarr et al., [*N Degrees of Separation: Multi-Dimensional Separation of Concerns*](https://doi.org/10.1145/302405.302457)
+- Murphy, Notkin, and Sullivan, [*Software Reflexion Models: Bridging the Gap Between Source and High-Level Models*](https://www.cs.ubc.ca/~murphy/papers/rm/fse95.html)
+- Silva, Valente, and Maia, [*Co-change Patterns: A Large Scale Empirical Study*](https://doi.org/10.1016/j.jss.2019.03.014)
+- Paixao et al., [*An Empirical Study of Cohesion and Coupling: Balancing Optimisation and Disruption*](https://doi.org/10.1109/TEVC.2017.2691281)
+- John Ousterhout, [*A Philosophy of Software Design*](https://www.web.stanford.edu/~ouster/cgi-bin/book.php)
 - How SQLite Is Tested  
   https://www.sqlite.org/testing.html
 - corrode: Tips for Faster Rust Compile Times  
@@ -3170,4 +3229,3 @@ Additional sources behind the 2.0 revision:
 ---
 
 End of Standard
-
